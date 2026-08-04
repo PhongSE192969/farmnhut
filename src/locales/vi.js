@@ -1796,9 +1796,12 @@ export default {
   },
   "customer": {
     "nav": {
-      "menu": "Phân bón",
-      "locations": "Đại lý",
+      "menu": "Sản phẩm",
+      "solutions": "Giải pháp cây trồng",
+      "knowledge": "Kiến thức nhà nông",
+      "locations": "Tìm điểm bán",
       "about": "Về chúng tôi",
+      "forDealers": "Dành cho đại lý",
       "rewards": "Ưu đãi",
       "searchPlaceholder": "Tìm kiếm phân bón...",
       "cart": "Giỏ hàng",
@@ -1807,11 +1810,13 @@ export default {
       "dashboard": "Bảng điều khiển",
       "logout": "Đăng xuất",
       "myProfile": "Hồ sơ của tôi",
-      "signOut": "Đăng xuất"
+      "signOut": "Đăng xuất",
+      "account": "Tài khoản",
+      "allProducts": "Tất cả sản phẩm",
+      "browseByCrops": "Khám phá theo cây trồng"
     },
     "footer": {
       "brandDesc": "AgriFert giúp quản lý đại lý nông nghiệp, phân bón và vật tư canh tác từ danh mục, kho hàng đến đơn vật tư.",
-      "reviews": "4.9 · Hơn 2,500 đơn vật tư",
       "company": "Công ty",
       "aboutUs": "Về chúng tôi",
       "franchise": "Hệ thống đại lý",

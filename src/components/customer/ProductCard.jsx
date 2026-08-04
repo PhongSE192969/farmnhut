@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Star, ShoppingCart } from "lucide-react";
+import { Plus, Star, ShoppingCart, MessageCircleQuestion } from "lucide-react";
 import { useCartStore } from "../../stores/cartStore";
 import { formatCurrency, truncateWords } from "../../utils/helpers";
 import toast from "react-hot-toast";
@@ -175,15 +175,17 @@ export default function ProductCard({ product, variantStocks = {} }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1 mb-1">
-          <Star size={12} className="text-amber-400 fill-amber-400" />
-          <span className="text-xs font-bold text-gray-800">
-            {product.rating || 4.8}
-          </span>
-          <span className="text-xs text-gray-400">
-            ({product.reviews || 120})
-          </span>
-        </div>
+        {typeof product.rating === "number" && product.rating > 0 && (
+          <div className="flex items-center gap-1 mb-1">
+            <Star size={12} className="text-amber-400 fill-amber-400" />
+            <span className="text-xs font-bold text-gray-800">
+              {product.rating.toFixed(1)}
+            </span>
+            {typeof product.reviews === "number" && product.reviews > 0 && (
+              <span className="text-xs text-gray-400">({product.reviews})</span>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3 mb-2 mt-2">
           {activeVariants.length > 0 && (
@@ -222,28 +224,40 @@ export default function ProductCard({ product, variantStocks = {} }) {
           {product.description || "Phân bón chất lượng cao cho canh tác bền vững."}
         </p>
 
-        <button
-          onClick={handleAdd}
-          disabled={isSoldOut || adding || !selectedVariant}
-          className={`mt-auto w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300
-            ${
-              adding
-                ? "bg-emerald-600 text-white scale-95"
-                : "bg-emerald-900 text-white hover:bg-lime-700 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-95 shadow-md shadow-gray-200/40"
-            }
-            ${isSoldOut || !selectedVariant ? "opacity-50 cursor-not-allowed" : ""}
-          `}
-        >
-          {adding ? (
-            <>
-              <ShoppingCart size={16} /> {t.added || "Added!"}
-            </>
-          ) : (
-            <>
-              <Plus size={16} /> {t.addToOrder || "Add to Order"}
-            </>
-          )}
-        </button>
+        <div className="mt-auto flex items-center gap-2">
+          <button
+            onClick={handleAdd}
+            disabled={isSoldOut || adding || !selectedVariant}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300
+              ${
+                adding
+                  ? "bg-emerald-600 text-white scale-95"
+                  : "bg-emerald-900 text-white hover:bg-lime-700 hover:shadow-lg hover:shadow-emerald-500/20 active:scale-95 shadow-md shadow-gray-200/40"
+              }
+              ${isSoldOut || !selectedVariant ? "opacity-50 cursor-not-allowed" : ""}
+            `}
+          >
+            {adding ? (
+              <>
+                <ShoppingCart size={16} /> {t.added || "Added!"}
+              </>
+            ) : (
+              <>
+                <Plus size={16} /> {t.addToOrder || "Add to Order"}
+              </>
+            )}
+          </button>
+
+          <a
+            href="/gioi-thieu"
+            onClick={(e) => e.stopPropagation()}
+            title="Hỏi kỹ thuật viên"
+            aria-label="Hỏi kỹ thuật viên về sản phẩm này"
+            className="shrink-0 flex items-center justify-center size-10 rounded-xl border border-emerald-800/30 text-emerald-800 hover:bg-emerald-50 transition-colors"
+          >
+            <MessageCircleQuestion size={18} />
+          </a>
+        </div>
       </div>
     </Link>
   );

@@ -12,6 +12,12 @@ import OrderSuccessPage from "./pages/customer/OrderSuccessPage";
 import OrderDetailPage from "./pages/customer/OrderDetailPage";
 import CheckoutInfoPage from "./pages/customer/CheckoutInfoPage";
 import CheckoutPaymentPage from "./pages/customer/CheckoutPaymentPage";
+import AboutPage from "./pages/customer/AboutPage";
+import KnowledgeListPage from "./pages/customer/KnowledgeListPage";
+import KnowledgeArticlePage from "./pages/customer/KnowledgeArticlePage";
+import StoreLocatorPage from "./pages/customer/StoreLocatorPage";
+import DealerRegistrationPage from "./pages/customer/DealerRegistrationPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
@@ -139,6 +145,11 @@ function App() {
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/checkout-info" element={<CheckoutInfoPage />} />
         <Route path="/checkout-payment" element={<CheckoutPaymentPage />} />
+        <Route path="/gioi-thieu" element={<AboutPage />} />
+        <Route path="/kien-thuc-nha-nong" element={<KnowledgeListPage />} />
+        <Route path="/kien-thuc-nha-nong/:slug" element={<KnowledgeArticlePage />} />
+        <Route path="/tim-diem-ban" element={<StoreLocatorPage />} />
+        <Route path="/danh-cho-dai-ly" element={<DealerRegistrationPage />} />
 
         <Route
           path="/profile"
@@ -267,7 +278,7 @@ function App() {
         <Route path="order-success" element={<PosOrderSuccessPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/home" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
