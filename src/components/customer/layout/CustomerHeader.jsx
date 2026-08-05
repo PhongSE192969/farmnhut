@@ -38,6 +38,76 @@ const getDashboardPathByRole = (roleName) => {
   }
 };
 
+// Shared between the always-inline (2xl+) search box and the floating
+// panel used at the xl compact tier — avoids duplicating this markup.
+function SearchResultsPanel({ isSearching, searchResults, onResultClick, onViewAll, floating = false }) {
+  return (
+    <div
+      className={
+        floating
+          ? "bg-white text-gray-800"
+          : "absolute top-11 right-0 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 text-gray-800"
+      }
+    >
+      {isSearching ? (
+        <div className="p-4 flex items-center justify-center gap-2 text-sm text-gray-400">
+          <Loader2 size={16} className="animate-spin text-customer-primary" />
+          Đang tìm...
+        </div>
+      ) : searchResults && searchResults.length > 0 ? (
+        <div className="flex flex-col">
+          <div className="flex flex-col max-h-[280px] overflow-y-auto">
+            {searchResults.map((item) => (
+              <Link
+                key={item.id}
+                to={`/products/${item.id}`}
+                onClick={onResultClick}
+                className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+              >
+                <img
+                  src={item.image || item.imageUrl || "/agri-logo.svg"}
+                  alt=""
+                  className="size-10 rounded-lg object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/agri-logo.svg";
+                  }}
+                />
+                <div className="flex flex-col">
+                  <span className="font-bold text-sm text-gray-700">{item.name}</span>
+                  <span className="text-xs text-gray-500">{item.categoryName}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <button
+            onClick={onViewAll}
+            className="w-full p-3 text-center text-sm font-bold text-customer-primary bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            Xem tất cả kết quả
+          </button>
+        </div>
+      ) : searchResults && searchResults.length === 0 ? (
+        <div className="p-4 text-center text-sm text-gray-500">
+          Không tìm thấy phân bón phù hợp
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Below xl (1280px) the header collapses to logo + hamburger only — nav,
+// language switcher, search and account/cart all move into MobileNav.
+// Chosen because the full desktop row (6 nav items + search + language +
+// account cluster) only has room to sit on one line from ~1280px up —
+// measured with Playwright (see PR notes). Do not lower this without
+// re-measuring.
+//
+// NOTE: the "xl:" prefix below is written as a literal string everywhere
+// on purpose — Tailwind's JIT scanner only picks up complete, literal
+// class names from source. A template-interpolated `` `${x}:flex` ``
+// never gets generated and silently does nothing at runtime.
+
 export default function CustomerHeader() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,6 +132,12 @@ export default function CustomerHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // Between xl and 2xl there isn't room for a permanently-inline search
+  // box (see PR notes) — it collapses to an icon that opens this floating
+  // panel instead. From 2xl up the full inline input shows and this stays
+  // unused (the trigger button is 2xl:hidden).
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchPanelRef = useRef(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -71,11 +147,42 @@ export default function CustomerHeader() {
   }, []);
 
   useEffect(() => {
+    if (!searchOpen) return;
+
+    const handleClickOutside = (e) => {
+      if (searchPanelRef.current && !searchPanelRef.current.contains(e.target)) {
+        setSearchOpen(false);
+      }
+    };
+    const handleEscape = (e) => {
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [searchOpen]);
+
+  useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
+
+  // Desktop nav uses the xl breakpoint; close the drawer if the viewport
+  // is (or becomes, via resize) wide enough to show the desktop header.
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1280px)");
+    const handleChange = (e) => {
+      if (e.matches) setMobileMenuOpen(false);
+    };
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
 
   const cartCount = items.length;
   const userRole = normalizeRoleName(user?.role?.name || user?.role);
@@ -158,52 +265,61 @@ export default function CustomerHeader() {
         }`}
       >
         <div
-          className={`flex items-center justify-between px-4 lg:px-10 mx-auto max-w-7xl transition-all duration-200 ${
-            scrolled ? "py-2" : "py-3 lg:py-4"
+          className={`flex items-center gap-2 xl:gap-3 px-4 lg:px-5 mx-auto max-w-7xl transition-all duration-200 ${
+            scrolled ? "py-2" : "py-3 lg:py-3.5"
           }`}
         >
-          <div className="flex items-center gap-4 lg:gap-8">
-            <Link to="/" className="flex items-center gap-2.5" aria-label="AgriFert - Trang chủ">
-              <img src="/agri-logo.svg" alt="" className="h-9 w-9 object-contain" />
-              <span className="text-lg font-extrabold tracking-tight">AgriFert</span>
-            </Link>
+          {/* Logo — fixed width, never shrinks */}
+          <Link
+            to="/"
+            className="flex items-center gap-2 shrink-0"
+            aria-label="AgriFert - Trang chủ"
+          >
+            <img src="/agri-logo.svg" alt="" className="h-8 w-8 object-contain shrink-0" />
+            <span className="text-base font-extrabold tracking-tight whitespace-nowrap">
+              AgriFert
+            </span>
+          </Link>
 
-            <nav className="hidden lg:flex items-center gap-1 pl-2">
-              {navLinks.map((link) =>
-                link.megaMenu ? (
-                  <div key={link.key} className="group relative">
-                    <Link
-                      to={link.href}
-                      className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors hover:text-customer-accent ${
-                        location.pathname === link.href ? "text-customer-accent" : "text-white/85"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                    <MegaMenu labels={t.nav} />
-                  </div>
-                ) : (
+          {/* Desktop nav — fills the remaining width, items spread evenly across it */}
+          <nav
+            className="hidden xl:flex items-center justify-evenly flex-1 min-w-0 px-2"
+          >
+            {navLinks.map((link) =>
+              link.megaMenu ? (
+                <div key={link.key} className="group relative shrink-0">
                   <Link
-                    key={link.key}
                     to={link.href}
-                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors hover:text-customer-accent ${
+                    className={`block px-1.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors hover:text-customer-accent ${
                       location.pathname === link.href ? "text-customer-accent" : "text-white/85"
                     }`}
                   >
                     {link.label}
                   </Link>
-                )
-              )}
-            </nav>
-          </div>
+                  <MegaMenu labels={t.nav} />
+                </div>
+              ) : (
+                <Link
+                  key={link.key}
+                  to={link.href}
+                  className={`shrink-0 px-1.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors hover:text-customer-accent ${
+                    location.pathname === link.href ? "text-customer-accent" : "text-white/85"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
+          </nav>
 
-          <div className="flex items-center gap-2.5">
-            <div className="hidden md:flex items-center gap-1 bg-white/5 rounded-xl px-1.5 h-10 border border-white/10">
+          {/* Actions — fixed cluster, never shrinks below its content */}
+          <div className="hidden xl:flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-0.5 bg-white/5 rounded-xl px-1 h-9 border border-white/10 shrink-0">
               {SUPPORTED_LANGUAGES.map((l) => (
                 <button
                   key={l.code}
                   onClick={() => setCurrentLangCode(l.code)}
-                  className={`p-1 rounded-lg text-sm transition-all ${
+                  className={`px-1 py-0.5 rounded-lg text-sm transition-all ${
                     currentLangCode === l.code
                       ? "bg-customer-accent text-customer-primaryDark font-bold"
                       : "opacity-60 hover:opacity-100"
@@ -216,11 +332,12 @@ export default function CustomerHeader() {
               ))}
             </div>
 
-            <div className="hidden md:flex items-center bg-white/10 border border-white/10 rounded-xl px-3 h-10 gap-2 hover:border-customer-accent/40 focus-within:border-customer-accent/40 transition-colors relative">
+            {/* 2xl+: search sits inline, full width, same as before */}
+            <div className="hidden 2xl:flex items-center bg-white/10 border border-white/10 rounded-xl px-2.5 h-9 gap-1.5 hover:border-customer-accent/40 focus-within:border-customer-accent/40 transition-colors relative shrink-0">
               {isSearching ? (
-                <Loader2 size={16} className="text-white/50 animate-spin" />
+                <Loader2 size={15} className="text-white/50 animate-spin shrink-0" />
               ) : (
-                <Search size={16} className="text-white/50" />
+                <Search size={15} className="text-white/50 shrink-0" />
               )}
 
               <label htmlFor="customer-header-search" className="sr-only">
@@ -236,70 +353,86 @@ export default function CustomerHeader() {
               />
 
               {searchQuery && (
-                <button onClick={clearSearch} aria-label="Xoá tìm kiếm" className="text-white/50 hover:text-white transition-colors">
-                  <X size={14} />
+                <button onClick={clearSearch} aria-label="Xoá tìm kiếm" className="text-white/50 hover:text-white transition-colors shrink-0">
+                  <X size={13} />
                 </button>
               )}
 
               {searchQuery && location.pathname !== "/products" && (
-                <div className="absolute top-12 right-0 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 text-gray-800">
-                  {isSearching ? (
-                    <div className="p-4 flex items-center justify-center gap-2 text-sm text-gray-400">
-                      <Loader2 size={16} className="animate-spin text-customer-primary" />
-                      Đang tìm...
-                    </div>
-                  ) : searchResults && searchResults.length > 0 ? (
-                    <div className="flex flex-col">
-                      <div className="flex flex-col max-h-[280px] overflow-y-auto">
-                        {searchResults.map((item) => (
-                          <Link
-                            key={item.id}
-                            to={`/products/${item.id}`}
-                            onClick={clearSearch}
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
-                          >
-                            <img
-                              src={item.image || item.imageUrl || "/agri-logo.svg"}
-                              alt=""
-                              className="size-10 rounded-lg object-cover"
-                              onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = "/agri-logo.svg";
-                              }}
-                            />
-                            <div className="flex flex-col">
-                              <span className="font-bold text-sm text-gray-700">{item.name}</span>
-                              <span className="text-xs text-gray-500">{item.categoryName}</span>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => navigate("/products")}
-                        className="p-3 text-center text-sm font-bold text-customer-primary bg-gray-50 hover:bg-gray-100 transition-colors"
-                      >
-                        Xem tất cả kết quả
+                <SearchResultsPanel
+                  isSearching={isSearching}
+                  searchResults={searchResults}
+                  onResultClick={clearSearch}
+                  onViewAll={() => navigate("/products")}
+                />
+              )}
+            </div>
+
+            {/* xl to <2xl: not enough room for an inline box — icon opens a floating panel instead */}
+            <div ref={searchPanelRef} className="relative 2xl:hidden shrink-0">
+              <button
+                onClick={() => setSearchOpen((v) => !v)}
+                aria-label={t.nav?.searchPlaceholder || "Tìm kiếm"}
+                aria-expanded={searchOpen}
+                className="flex items-center justify-center h-9 w-9 rounded-xl bg-white/10 border border-white/10 text-white/70 hover:text-white hover:border-customer-accent/40 transition-colors"
+              >
+                <Search size={16} />
+              </button>
+
+              {searchOpen && (
+                <div className="absolute right-0 top-11 w-72 bg-customer-primaryDark border border-white/15 rounded-xl shadow-xl p-2 z-50">
+                  <div className="flex items-center bg-white/10 border border-white/10 rounded-lg px-2.5 h-10 gap-1.5">
+                    {isSearching ? (
+                      <Loader2 size={15} className="text-white/50 animate-spin shrink-0" />
+                    ) : (
+                      <Search size={15} className="text-white/50 shrink-0" />
+                    )}
+                    <input
+                      autoFocus
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onKeyDown={handleSearchKeyDown}
+                      placeholder={t.nav?.searchPlaceholder || "Tìm phân bón..."}
+                      className="flex-1 min-w-0 bg-transparent text-sm text-white placeholder-white/40 outline-none"
+                    />
+                    {searchQuery && (
+                      <button onClick={clearSearch} aria-label="Xoá tìm kiếm" className="text-white/50 hover:text-white transition-colors shrink-0">
+                        <X size={13} />
                       </button>
+                    )}
+                  </div>
+
+                  {searchQuery && location.pathname !== "/products" && (
+                    <div className="mt-2 rounded-lg overflow-hidden">
+                      <SearchResultsPanel
+                        isSearching={isSearching}
+                        searchResults={searchResults}
+                        onResultClick={() => {
+                          clearSearch();
+                          setSearchOpen(false);
+                        }}
+                        onViewAll={() => {
+                          setSearchOpen(false);
+                          navigate("/products");
+                        }}
+                        floating
+                      />
                     </div>
-                  ) : searchResults && searchResults.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500">
-                      Không tìm thấy phân bón phù hợp
-                    </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>
 
             {isCustomer ? (
-              <div className="hidden md:flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => navigate("/checkout")}
-                  className="relative flex items-center gap-2 h-10 px-3 lg:px-4 bg-customer-accent text-customer-primaryDark font-bold text-sm rounded-xl hover:brightness-95 transition-colors"
+                  className="relative flex items-center gap-1.5 h-9 px-2.5 2xl:px-3.5 bg-customer-accent text-customer-primaryDark font-bold text-sm rounded-xl hover:brightness-95 transition-colors whitespace-nowrap"
                 >
-                  <ShoppingBag size={18} />
-                  <span className="hidden lg:inline">{t.nav?.cart || "Giỏ hàng"}</span>
+                  <ShoppingBag size={17} />
+                  <span className="hidden 2xl:inline">{t.nav?.cart || "Giỏ hàng"}</span>
                   {cartCount > 0 && (
-                    <span className="min-w-[20px] h-5 rounded-full bg-customer-primaryDark text-white text-xs flex items-center justify-center px-1 font-bold">
+                    <span className="min-w-[18px] h-[18px] rounded-full bg-customer-primaryDark text-white text-[11px] flex items-center justify-center px-1 font-bold">
                       {cartCount}
                     </span>
                   )}
@@ -308,12 +441,12 @@ export default function CustomerHeader() {
                 <Link
                   to="/profile"
                   aria-label={t.nav?.account || "Tài khoản"}
-                  className="flex items-center justify-center gap-2 h-10 w-10 bg-customer-accent text-customer-primaryDark font-bold rounded-xl"
+                  className="flex items-center justify-center h-9 w-9 bg-customer-accent text-customer-primaryDark font-bold rounded-xl shrink-0"
                 >
                   {user?.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className="size-8 rounded-full object-cover" />
+                    <img src={user.avatarUrl} alt="" className="size-7 rounded-full object-cover" />
                   ) : (
-                    <User size={18} />
+                    <User size={17} />
                   )}
                 </Link>
 
@@ -322,16 +455,16 @@ export default function CustomerHeader() {
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                   aria-label={t.nav?.logout || "Đăng xuất"}
-                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-60"
+                  className="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-60 shrink-0"
                 >
                   {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
                 </button>
               </div>
             ) : isBackOfficeUser ? (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Link
                   to={dashboardPath}
-                  className="h-10 px-4 flex items-center text-sm font-bold text-white border border-white/20 rounded-xl hover:bg-white/10 transition-colors"
+                  className="h-9 px-3 flex items-center text-sm font-bold text-white border border-white/20 rounded-xl hover:bg-white/10 transition-colors whitespace-nowrap"
                 >
                   {t.nav?.dashboard || "Bảng điều khiển"}
                 </Link>
@@ -340,49 +473,50 @@ export default function CustomerHeader() {
                   onClick={handleLogout}
                   disabled={isLoggingOut}
                   aria-label={t.nav?.logout || "Đăng xuất"}
-                  className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-60"
+                  className="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-60 shrink-0"
                 >
                   {isLoggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
                 </button>
               </div>
             ) : (
-              <div className="hidden md:flex gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Link
                   to="/login"
-                  className="h-10 px-4 flex items-center text-sm font-bold text-white border border-white/20 rounded-xl hover:bg-white/10 transition-colors"
+                  className="h-9 px-3 flex items-center text-sm font-bold text-white border border-white/20 rounded-xl hover:bg-white/10 transition-colors whitespace-nowrap"
                 >
                   {t.nav?.signIn || "Đăng nhập"}
                 </Link>
                 <Link
                   to="/register"
-                  className="h-10 px-4 flex items-center text-sm font-bold text-customer-primaryDark bg-customer-accent rounded-xl hover:brightness-95 transition-colors"
+                  className="h-9 px-3 flex items-center text-sm font-bold text-customer-primaryDark bg-customer-accent rounded-xl hover:brightness-95 transition-colors whitespace-nowrap"
                 >
                   {t.nav?.joinUs || "Tham gia"}
                 </Link>
                 <button
                   onClick={() => navigate("/checkout")}
-                  className="relative flex items-center gap-2 h-10 px-3 bg-customer-accent text-customer-primaryDark font-bold text-sm rounded-xl hover:brightness-95 transition-colors"
+                  className="relative flex items-center gap-1.5 h-9 px-2.5 bg-customer-accent text-customer-primaryDark font-bold text-sm rounded-xl hover:brightness-95 transition-colors shrink-0"
                   aria-label={t.nav?.cart || "Giỏ hàng"}
                 >
-                  <ShoppingBag size={18} />
+                  <ShoppingBag size={17} />
                   {cartCount > 0 && (
-                    <span className="min-w-[20px] h-5 rounded-full bg-customer-primaryDark text-white text-xs flex items-center justify-center px-1 font-bold">
+                    <span className="min-w-[18px] h-[18px] rounded-full bg-customer-primaryDark text-white text-[11px] flex items-center justify-center px-1 font-bold">
                       {cartCount}
                     </span>
                   )}
                 </button>
               </div>
             )}
-
-            <button
-              onClick={() => setMobileMenuOpen((v) => !v)}
-              aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"}
-              aria-expanded={mobileMenuOpen}
-              className="lg:hidden flex items-center justify-center size-10 rounded-xl bg-white/10 text-white"
-            >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
           </div>
+
+          {/* Below xl: logo + hamburger only — everything else lives in MobileNav */}
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"}
+            aria-expanded={mobileMenuOpen}
+            className="xl:hidden ml-auto flex items-center justify-center size-10 rounded-xl bg-white/10 text-white shrink-0"
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </header>
 
@@ -396,6 +530,23 @@ export default function CustomerHeader() {
         isLoggingOut={isLoggingOut}
         onLogout={handleLogout}
         labels={t.nav}
+        searchQuery={searchQuery}
+        onSearchChange={handleSearchChange}
+        onSearchKeyDown={handleSearchKeyDown}
+        isSearching={isSearching}
+        clearSearch={clearSearch}
+        searchResults={searchResults}
+        onSearchSubmit={() => {
+          setMobileMenuOpen(false);
+          navigate("/products");
+        }}
+        currentLangCode={currentLangCode}
+        setCurrentLangCode={setCurrentLangCode}
+        cartCount={cartCount}
+        onCartClick={() => {
+          setMobileMenuOpen(false);
+          navigate("/checkout");
+        }}
       />
     </>
   );
