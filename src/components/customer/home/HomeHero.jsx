@@ -1,26 +1,126 @@
-import { ArrowRight, Sprout } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Leaf } from "lucide-react";
 import CustomerButton from "@/components/customer/ui/CustomerButton";
 import Reveal from "@/components/customer/ui/Reveal";
 
-export default function HomeHero() {
-  return (
-    <section className="font-customer relative bg-customer-primaryDark overflow-hidden">
-      {/* Faint decorative texture, not a photo — keeps the solid background from feeling flat without any contrast risk */}
-      <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-[length:28px_28px]" />
+const SLIDE_DURATION_MS = 7000;
+const CROSSFADE_MS = 1000;
 
-      <div className="relative max-w-7xl mx-auto px-4 lg:px-10 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-        <Reveal as="div" className="order-2 lg:order-1">
-          <span className="inline-flex items-center gap-2 bg-white/10 text-customer-accent border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-6">
-            <Sprout size={13} /> Giải pháp dinh dưỡng cây trồng
+// Slide 1 is the LCP element — kept small/eager. Slides 2-3 are mounted a
+// beat after first paint (see slidesReady below) so they never compete
+// with critical above-the-fold resources.
+const SLIDES = [
+  {
+    src: "/assets/customer/hero/hero-farm-field.jpg",
+    alt: "Cánh đồng xanh vào buổi sáng sớm — hình ảnh minh họa",
+  },
+  {
+    src: "/assets/customer/hero/hero-hands-seedling.jpg",
+    alt: "Bàn tay chăm sóc cây con trong đất — hình ảnh minh họa",
+  },
+  {
+    src: "/assets/customer/hero/hero-golden-field.jpg",
+    alt: "Cánh đồng vào mùa vụ dưới nắng vàng — hình ảnh minh họa",
+  },
+];
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+const prefersReducedData = () =>
+  typeof navigator !== "undefined" && navigator.connection?.saveData === true;
+
+// Mobile renders a single pre-cropped image (see the sm:hidden <img> below)
+// — the slideshow only applies at the breakpoint where it's actually shown.
+const isDesktopViewport = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(min-width: 640px)").matches;
+
+export default function HomeHero() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [slidesReady, setSlidesReady] = useState(false);
+  const timerRef = useRef(null);
+
+  const reduceMotion = prefersReducedMotion() || prefersReducedData();
+  const skipSlideshow = reduceMotion || !isDesktopViewport();
+
+  useEffect(() => {
+    if (skipSlideshow) return;
+
+    // Defer mounting slides 2-3 until the main hero content has painted.
+    const readyTimeout = setTimeout(() => setSlidesReady(true), 1200);
+    return () => clearTimeout(readyTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (skipSlideshow || !slidesReady) return;
+
+    timerRef.current = setInterval(() => {
+      setActiveIndex((i) => (i + 1) % SLIDES.length);
+    }, SLIDE_DURATION_MS);
+
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slidesReady]);
+
+  return (
+    <section className="font-customer relative min-h-[600px] lg:min-h-[680px] flex items-center overflow-hidden bg-customer-primaryDark">
+      {/* Mobile: single pre-cropped image, no slideshow, no Ken Burns */}
+      <img
+        src="/assets/customer/hero/hero-farm-field-mobile.jpg"
+        alt={SLIDES[0].alt}
+        className="sm:hidden absolute inset-0 h-full w-full object-cover"
+        fetchPriority="high"
+      />
+
+      {/* Desktop/tablet: crossfade slideshow */}
+      <div className="hidden sm:block absolute inset-0">
+        {SLIDES.map((slide, index) => {
+          if (index > 0 && !slidesReady) return null;
+          const isActive = index === activeIndex;
+
+          return (
+            <img
+              key={slide.src}
+              src={slide.src}
+              alt={slide.alt}
+              fetchPriority={index === 0 ? "high" : undefined}
+              loading={index === 0 ? "eager" : "lazy"}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out ${
+                isActive ? "opacity-100" : "opacity-0"
+              } ${!reduceMotion && isActive ? "animate-hero-kenburns" : ""}`}
+              style={{ transitionDuration: `${CROSSFADE_MS}ms` }}
+            />
+          );
+        })}
+      </div>
+
+      {/*
+        Two-layer overlay, tuned for legibility against ALL 3 slide photos —
+        including the bright sunrise-field one, where a single top-to-bottom
+        gradient left the top ~20% opacity and the eyebrow badge unreadable.
+        Layer 1 is a FLAT tint (constant minimum darkness everywhere, so no
+        region of any image is ever left too bright for white text). Layer 2
+        adds extra depth toward the bottom for the buttons, on top of that
+        floor — it never goes lighter than layer 1 alone.
+      */}
+      <div className="absolute inset-0 bg-customer-primaryDark/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-customer-primaryDark/45 via-customer-primaryDark/10 to-transparent" />
+
+      <div className="relative z-10 px-4 lg:px-10 pt-20 pb-24 lg:pb-32 max-w-7xl mx-auto w-full">
+        <Reveal className="max-w-xl">
+          <span className="inline-flex items-center gap-2 bg-customer-primaryDark/80 text-customer-accent border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-5 backdrop-blur-sm">
+            <Leaf size={13} /> Giải pháp dinh dưỡng cây trồng
           </span>
 
-          <h1 className="text-white text-3xl md:text-4xl lg:text-5xl font-extrabold leading-[1.1] tracking-tight mb-6 max-w-lg">
+          <h1 className="text-white text-3xl md:text-5xl font-extrabold leading-tight tracking-tight mb-5 [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">
             Dinh dưỡng đúng lúc,
             <br />
             vững mùa bội thu
           </h1>
 
-          <p className="text-white/75 text-base md:text-lg leading-relaxed mb-9 max-w-md">
+          <p className="text-white/90 text-base md:text-lg leading-relaxed mb-8 max-w-md [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]">
             AgriFert mang đến các giải pháp dinh dưỡng được xây dựng theo cây
             trồng, giai đoạn sinh trưởng và nhu cầu canh tác thực tế.
           </p>
@@ -42,33 +142,6 @@ export default function HomeHero() {
             <CustomerButton variant="outline-white" size="lg" to="/products">
               Khám phá sản phẩm
             </CustomerButton>
-          </div>
-        </Reveal>
-
-        <Reveal as="div" delay={120} className="order-1 lg:order-2 relative">
-          {/* Elevated, framed photo card — the reference's "floating" hero
-              visual reimagined without photo-compositing tools: a rounded
-              card with a soft shadow and accent ring stands in for it. */}
-          <div className="relative mx-auto max-w-md lg:max-w-none">
-            <div className="absolute -inset-3 rounded-[2rem] border border-customer-accent/25" />
-            <div className="relative rounded-[1.75rem] overflow-hidden aspect-[4/5] lg:aspect-[4/4.5] shadow-2xl shadow-black/40">
-              <img
-                src="/assets/customer/hero/hero-hands-seedling.jpg"
-                alt="Bàn tay chăm sóc cây con trong đất — hình ảnh minh họa"
-                className="h-full w-full object-cover"
-                fetchPriority="high"
-              />
-            </div>
-
-            <div className="absolute -bottom-5 -left-5 flex items-center gap-3 bg-white rounded-2xl shadow-xl px-4 py-3">
-              <span className="flex size-9 items-center justify-center rounded-full bg-customer-light text-customer-primary shrink-0">
-                <Sprout size={18} />
-              </span>
-              <div className="leading-tight">
-                <p className="text-xs font-bold text-customer-ink">Chăm sóc đúng cách</p>
-                <p className="text-[11px] text-customer-secondary">Từng giai đoạn cây trồng</p>
-              </div>
-            </div>
           </div>
         </Reveal>
       </div>

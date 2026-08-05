@@ -22,15 +22,13 @@ dealers, factories, or product-in-use results.** It is stock content
 illustrating the fertilizer/agriculture domain in general. Captions in the
 UI use "Hình ảnh minh họa" rather than implying it's AgriFert's own.
 
-## Hero (`hero/`)
-
-Solid dark background (no full-bleed photo, no slideshow) with a single
-framed portrait photo card on the right — text stays on a flat color, so
-there's no image-contrast risk to manage.
+## Hero slideshow (`hero/`)
 
 | Local file | Source | Photographer | Role |
 |---|---|---|---|
-| `hero-hands-seedling.jpg` | https://unsplash.com/photos/x8ZStukS2PM | Noah Buscher | Framed card, right side of Hero |
+| `hero-farm-field.jpg` (+ `-mobile.jpg` crop) | https://unsplash.com/photos/photo-of-green-grass-field-at-sunrise-4miBe6zg5r0 | Ales Krivec | Slide 1 — LCP, sunrise field |
+| `hero-hands-seedling.jpg` | https://unsplash.com/photos/x8ZStukS2PM | Noah Buscher | Slide 2 — hands/seedling close-up |
+| `hero-golden-field.jpg` | https://unsplash.com/photos/golden-wheat-field-ready-for-harvest-_rXmtIMnOT8 | Nikolett Emmert | Slide 3 — harvest-season field |
 
 ## Crop explorer (`crops/`)
 
