@@ -132,10 +132,9 @@ export default function CustomerHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  // Between xl and 2xl there isn't room for a permanently-inline search
-  // box (see PR notes) — it collapses to an icon that opens this floating
-  // panel instead. From 2xl up the full inline input shows and this stays
-  // unused (the trigger button is 2xl:hidden).
+  // The header's max-w-7xl container never has room for a permanently
+  // inline search box at any width (see the comment above the search
+  // markup below) — it's always icon + this floating panel from xl up.
   const [searchOpen, setSearchOpen] = useState(false);
   const searchPanelRef = useRef(null);
 
@@ -332,44 +331,20 @@ export default function CustomerHeader() {
               ))}
             </div>
 
-            {/* 2xl+: search sits inline, full width, same as before */}
-            <div className="hidden 2xl:flex items-center bg-white/10 border border-white/10 rounded-xl px-2.5 h-9 gap-1.5 hover:border-customer-accent/40 focus-within:border-customer-accent/40 transition-colors relative shrink-0">
-              {isSearching ? (
-                <Loader2 size={15} className="text-white/50 animate-spin shrink-0" />
-              ) : (
-                <Search size={15} className="text-white/50 shrink-0" />
-              )}
-
-              <label htmlFor="customer-header-search" className="sr-only">
-                {t.nav?.searchPlaceholder || "Tìm kiếm phân bón..."}
-              </label>
-              <input
-                id="customer-header-search"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onKeyDown={handleSearchKeyDown}
-                placeholder={t.nav?.searchPlaceholder || "Tìm phân bón..."}
-                className="bg-transparent text-sm text-white placeholder-white/40 outline-none w-40"
-              />
-
-              {searchQuery && (
-                <button onClick={clearSearch} aria-label="Xoá tìm kiếm" className="text-white/50 hover:text-white transition-colors shrink-0">
-                  <X size={13} />
-                </button>
-              )}
-
-              {searchQuery && location.pathname !== "/products" && (
-                <SearchResultsPanel
-                  isSearching={isSearching}
-                  searchResults={searchResults}
-                  onResultClick={clearSearch}
-                  onViewAll={() => navigate("/products")}
-                />
-              )}
-            </div>
-
-            {/* xl to <2xl: not enough room for an inline box — icon opens a floating panel instead */}
-            <div ref={searchPanelRef} className="relative 2xl:hidden shrink-0">
+            {/*
+              Search is icon + floating panel at every width from xl up —
+              NOT just "below 2xl". The header's own container is
+              `max-w-7xl` (1280px), so its content area never actually
+              gets wider past 1280px viewport no matter how wide the
+              real browser window is. An earlier version of this file
+              tried to show a full inline input again at `2xl:`, on the
+              assumption that a wider viewport meant more room — it
+              didn't, because the container itself doesn't grow, and
+              that reintroduced the exact overlap bug this component
+              exists to fix. Do not add a "wider tier" back without
+              first widening max-w-7xl below and re-measuring.
+            */}
+            <div ref={searchPanelRef} className="relative shrink-0">
               <button
                 onClick={() => setSearchOpen((v) => !v)}
                 aria-label={t.nav?.searchPlaceholder || "Tìm kiếm"}
@@ -427,10 +402,10 @@ export default function CustomerHeader() {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => navigate("/checkout")}
-                  className="relative flex items-center gap-1.5 h-9 px-2.5 2xl:px-3.5 bg-customer-accent text-customer-primaryDark font-bold text-sm rounded-xl hover:brightness-95 transition-colors whitespace-nowrap"
+                  className="relative flex items-center gap-1.5 h-9 px-2.5 bg-customer-accent text-customer-primaryDark font-bold text-sm rounded-xl hover:brightness-95 transition-colors whitespace-nowrap"
+                  aria-label={t.nav?.cart || "Giỏ hàng"}
                 >
                   <ShoppingBag size={17} />
-                  <span className="hidden 2xl:inline">{t.nav?.cart || "Giỏ hàng"}</span>
                   {cartCount > 0 && (
                     <span className="min-w-[18px] h-[18px] rounded-full bg-customer-primaryDark text-white text-[11px] flex items-center justify-center px-1 font-bold">
                       {cartCount}
