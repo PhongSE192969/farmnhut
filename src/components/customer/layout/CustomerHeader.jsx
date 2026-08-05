@@ -132,9 +132,8 @@ export default function CustomerHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  // The header's max-w-7xl container never has room for a permanently
-  // inline search box at any width (see the comment above the search
-  // markup below) — it's always icon + this floating panel from xl up.
+  // Search stays icon + floating panel at every xl+ width on purpose —
+  // see the comment above the search markup below before changing this.
   const [searchOpen, setSearchOpen] = useState(false);
   const searchPanelRef = useRef(null);
 
@@ -264,7 +263,7 @@ export default function CustomerHeader() {
         }`}
       >
         <div
-          className={`flex items-center gap-2 xl:gap-3 px-4 lg:px-5 mx-auto max-w-7xl transition-all duration-200 ${
+          className={`flex items-center gap-2 xl:gap-4 px-4 sm:px-6 lg:px-6 xl:px-6 2xl:px-14 mx-auto max-w-[1920px] transition-all duration-200 ${
             scrolled ? "py-2" : "py-3 lg:py-3.5"
           }`}
         >
@@ -332,17 +331,18 @@ export default function CustomerHeader() {
             </div>
 
             {/*
-              Search is icon + floating panel at every width from xl up —
-              NOT just "below 2xl". The header's own container is
-              `max-w-7xl` (1280px), so its content area never actually
-              gets wider past 1280px viewport no matter how wide the
-              real browser window is. An earlier version of this file
-              tried to show a full inline input again at `2xl:`, on the
-              assumption that a wider viewport meant more room — it
-              didn't, because the container itself doesn't grow, and
-              that reintroduced the exact overlap bug this component
-              exists to fix. Do not add a "wider tier" back without
-              first widening max-w-7xl below and re-measuring.
+              Search is icon + floating panel at every width from xl up,
+              with no wider "upgrade" tier. An earlier version tried to
+              show a full inline input again at 2xl, back when the outer
+              container was capped at max-w-7xl (1280px) — at that cap,
+              a wider *viewport* didn't mean a wider *header*, so the
+              extra-width assumption was false and re-triggered the nav/
+              action overlap this component exists to prevent. The
+              container is wider now (max-w-[1920px] below), but the nav
+              is what benefits from that (flex-1 + justify-evenly soaks
+              up any extra room automatically) — don't re-add a wider
+              search tier without re-measuring with Playwright the way
+              the PR history for this file did.
             */}
             <div ref={searchPanelRef} className="relative shrink-0">
               <button
