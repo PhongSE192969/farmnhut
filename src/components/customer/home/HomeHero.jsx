@@ -96,22 +96,31 @@ export default function HomeHero() {
         })}
       </div>
 
-      {/* Single fixed overlay — contrast stays constant across slides */}
-      <div className="absolute inset-0 bg-gradient-to-t from-customer-primaryDark via-customer-primaryDark/55 to-customer-primaryDark/20" />
+      {/*
+        Two-layer overlay, tuned for legibility against ALL 3 slide photos —
+        including the bright sunrise-field one, where a single top-to-bottom
+        gradient left the top ~20% opacity and the eyebrow badge unreadable.
+        Layer 1 is a FLAT tint (constant minimum darkness everywhere, so no
+        region of any image is ever left too bright for white text). Layer 2
+        adds extra depth toward the bottom for the buttons, on top of that
+        floor — it never goes lighter than layer 1 alone.
+      */}
+      <div className="absolute inset-0 bg-customer-primaryDark/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-customer-primaryDark/45 via-customer-primaryDark/10 to-transparent" />
 
       <div className="relative z-10 px-4 lg:px-10 pt-20 pb-24 lg:pb-32 max-w-7xl mx-auto w-full">
         <Reveal className="max-w-xl">
-          <span className="inline-flex items-center gap-2 bg-white/10 text-customer-accent border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-5 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-2 bg-customer-primaryDark/80 text-customer-accent border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-5 backdrop-blur-sm">
             <Leaf size={13} /> Giải pháp dinh dưỡng cây trồng
           </span>
 
-          <h1 className="text-white text-3xl md:text-5xl font-extrabold leading-tight tracking-tight mb-5">
+          <h1 className="text-white text-3xl md:text-5xl font-extrabold leading-tight tracking-tight mb-5 [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">
             Dinh dưỡng đúng lúc,
             <br />
             vững mùa bội thu
           </h1>
 
-          <p className="text-white/80 text-base md:text-lg leading-relaxed mb-8 max-w-md">
+          <p className="text-white/90 text-base md:text-lg leading-relaxed mb-8 max-w-md [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]">
             AgriFert mang đến các giải pháp dinh dưỡng được xây dựng theo cây
             trồng, giai đoạn sinh trưởng và nhu cầu canh tác thực tế.
           </p>
