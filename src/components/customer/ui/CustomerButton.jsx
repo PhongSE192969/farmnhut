@@ -7,6 +7,8 @@ const VARIANTS = {
     "bg-customer-accent text-customer-primaryDark hover:brightness-95 shadow-sm",
   outline:
     "border border-customer-primary text-customer-primary hover:bg-customer-light",
+  "outline-white":
+    "border border-white/70 text-white hover:bg-white hover:text-customer-primaryDark",
   ghost: "text-customer-primary hover:bg-customer-light",
 };
 

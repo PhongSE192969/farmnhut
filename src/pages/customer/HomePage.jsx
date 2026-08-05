@@ -9,7 +9,9 @@ import CropExplorer from "@/components/customer/home/CropExplorer";
 import CropProblems from "@/components/customer/home/CropProblems";
 import FeaturedProducts from "@/components/customer/home/FeaturedProducts";
 import NutritionJourney from "@/components/customer/home/NutritionJourney";
-import BrandValues from "@/components/customer/home/BrandValues";
+import WhyAgriFert from "@/components/customer/home/WhyAgriFert";
+import VideoSection from "@/components/customer/home/VideoSection";
+import TransparencyStory from "@/components/customer/home/TransparencyStory";
 import FarmerKnowledge from "@/components/customer/home/FarmerKnowledge";
 import StoreLocator from "@/components/customer/home/StoreLocator";
 import DealerCTA from "@/components/customer/home/DealerCTA";
@@ -92,11 +94,16 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col">
-      <h1 className="sr-only">AgriFert - Dinh dưỡng cây trồng đúng mùa vụ</h1>
-
+      {/* 2. Hero slideshow (renders the page's single <h1>) */}
       <HomeHero />
+
+      {/* 3. Product Finder — floats over the Hero's bottom edge */}
       <ProductFinder />
+
+      {/* 4. Khám phá theo cây trồng */}
       <CropExplorer />
+
+      {/* 5. Vấn đề / nhu cầu cây trồng */}
       <CropProblems />
 
       {franchises.length > 0 && (
@@ -122,12 +129,46 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* 6. Sản phẩm nổi bật (+ gợi ý cá nhân hoá — logic cũ giữ nguyên) */}
       <FeaturedProducts products={products} loading={loadingProducts} />
-      <NutritionJourney />
       <RecommendationSection franchiseId={selectedFranchiseId} topK={20} />
-      <BrandValues />
+
+      {/* 7. Hành trình dinh dưỡng theo giai đoạn */}
+      <NutritionJourney />
+
+      {/* 8. Vì sao lựa chọn AgriFert? */}
+      <WhyAgriFert />
+
+      {/* 9. Video section — "Đồng hành cùng từng mùa vụ" */}
+      <VideoSection
+        posterSrc="/assets/customer/video/poster-brand-story.jpg"
+        posterAlt="Hình ảnh minh họa cánh đồng vào mùa vụ"
+        eyebrow="Câu chuyện thương hiệu"
+        title="Đồng hành cùng từng mùa vụ"
+        description="Từ nhu cầu của cây trồng đến lựa chọn của người canh tác, AgriFert hướng đến những giải pháp dễ tiếp cận, rõ ràng và phù hợp với hành trình chăm sóc từng mùa vụ."
+        ctaLabel="Tìm hiểu về AgriFert"
+        ctaTo="/gioi-thieu"
+      />
+
+      {/* 10. Chất lượng bắt đầu từ sự minh bạch */}
+      <TransparencyStory />
+
+      {/* 11. Kiến thức nhà nông */}
       <FarmerKnowledge />
+
+      {/* Video transition trước phần tìm điểm bán */}
+      <VideoSection
+        posterSrc="/assets/customer/video/poster-store-locator.jpg"
+        posterAlt="Hình ảnh minh họa cánh đồng cây trồng theo hàng lối"
+        title="Tìm sản phẩm phù hợp cho cây trồng của bạn"
+        ctaLabel="Tìm điểm bán"
+        ctaTo="/tim-diem-ban"
+      />
+
+      {/* 12. Tìm điểm bán */}
       <StoreLocator />
+
+      {/* 13. CTA hợp tác đại lý */}
       <DealerCTA />
     </div>
   );

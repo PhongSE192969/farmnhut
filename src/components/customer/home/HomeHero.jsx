@@ -1,28 +1,124 @@
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Leaf } from "lucide-react";
 import CustomerButton from "@/components/customer/ui/CustomerButton";
 import Reveal from "@/components/customer/ui/Reveal";
 
+const SLIDE_DURATION_MS = 7000;
+const CROSSFADE_MS = 1000;
+
+// Slide 1 is the LCP element — kept small/eager. Slides 2-3 are mounted a
+// beat after first paint (see slidesReady below) so they never compete
+// with critical above-the-fold resources.
+const SLIDES = [
+  {
+    src: "/assets/customer/hero/hero-farm-field.jpg",
+    alt: "Cánh đồng xanh vào buổi sáng sớm — hình ảnh minh họa",
+  },
+  {
+    src: "/assets/customer/hero/hero-hands-seedling.jpg",
+    alt: "Bàn tay chăm sóc cây con trong đất — hình ảnh minh họa",
+  },
+  {
+    src: "/assets/customer/hero/hero-golden-field.jpg",
+    alt: "Cánh đồng vào mùa vụ dưới nắng vàng — hình ảnh minh họa",
+  },
+];
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+const prefersReducedData = () =>
+  typeof navigator !== "undefined" && navigator.connection?.saveData === true;
+
+// Mobile renders a single pre-cropped image (see the sm:hidden <img> below)
+// — the slideshow only applies at the breakpoint where it's actually shown.
+const isDesktopViewport = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(min-width: 640px)").matches;
+
 export default function HomeHero() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [slidesReady, setSlidesReady] = useState(false);
+  const timerRef = useRef(null);
+
+  const reduceMotion = prefersReducedMotion() || prefersReducedData();
+  const skipSlideshow = reduceMotion || !isDesktopViewport();
+
+  useEffect(() => {
+    if (skipSlideshow) return;
+
+    // Defer mounting slides 2-3 until the main hero content has painted.
+    const readyTimeout = setTimeout(() => setSlidesReady(true), 1200);
+    return () => clearTimeout(readyTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (skipSlideshow || !slidesReady) return;
+
+    timerRef.current = setInterval(() => {
+      setActiveIndex((i) => (i + 1) % SLIDES.length);
+    }, SLIDE_DURATION_MS);
+
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slidesReady]);
+
   return (
-    <section className="font-customer bg-customer-cream">
-      <div className="max-w-7xl mx-auto px-4 lg:px-10 py-12 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-        <Reveal as="div" className="order-2 lg:order-1">
-          <span className="inline-flex items-center gap-2 bg-customer-light text-customer-primary rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-5">
+    <section className="font-customer relative min-h-[600px] lg:min-h-[680px] flex items-center overflow-hidden bg-customer-primaryDark">
+      {/* Mobile: single pre-cropped image, no slideshow, no Ken Burns */}
+      <img
+        src="/assets/customer/hero/hero-farm-field-mobile.jpg"
+        alt={SLIDES[0].alt}
+        className="sm:hidden absolute inset-0 h-full w-full object-cover"
+        fetchPriority="high"
+      />
+
+      {/* Desktop/tablet: crossfade slideshow */}
+      <div className="hidden sm:block absolute inset-0">
+        {SLIDES.map((slide, index) => {
+          if (index > 0 && !slidesReady) return null;
+          const isActive = index === activeIndex;
+
+          return (
+            <img
+              key={slide.src}
+              src={slide.src}
+              alt={slide.alt}
+              fetchPriority={index === 0 ? "high" : undefined}
+              loading={index === 0 ? "eager" : "lazy"}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out ${
+                isActive ? "opacity-100" : "opacity-0"
+              } ${!reduceMotion && isActive ? "animate-hero-kenburns" : ""}`}
+              style={{ transitionDuration: `${CROSSFADE_MS}ms` }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Single fixed overlay — contrast stays constant across slides */}
+      <div className="absolute inset-0 bg-gradient-to-t from-customer-primaryDark via-customer-primaryDark/55 to-customer-primaryDark/20" />
+
+      <div className="relative z-10 px-4 lg:px-10 pt-20 pb-24 lg:pb-32 max-w-7xl mx-auto w-full">
+        <Reveal className="max-w-xl">
+          <span className="inline-flex items-center gap-2 bg-white/10 text-customer-accent border border-white/15 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-5 backdrop-blur-sm">
             <Leaf size={13} /> Giải pháp dinh dưỡng cây trồng
           </span>
 
-          <h1 className="text-customer-ink text-3xl md:text-5xl font-extrabold leading-tight tracking-tight mb-5 max-w-lg">
-            Dinh dưỡng phù hợp cho từng mùa vụ
+          <h1 className="text-white text-3xl md:text-5xl font-extrabold leading-tight tracking-tight mb-5">
+            Dinh dưỡng đúng lúc,
+            <br />
+            vững mùa bội thu
           </h1>
 
-          <p className="text-customer-secondary text-base md:text-lg leading-relaxed mb-8 max-w-md">
-            Khám phá sản phẩm AgriFert theo cây trồng, giai đoạn sinh trưởng
-            và nhu cầu canh tác.
+          <p className="text-white/80 text-base md:text-lg leading-relaxed mb-8 max-w-md">
+            AgriFert mang đến các giải pháp dinh dưỡng được xây dựng theo cây
+            trồng, giai đoạn sinh trưởng và nhu cầu canh tác thực tế.
           </p>
 
           <div className="flex flex-wrap gap-3">
             <CustomerButton
-              variant="primary"
+              variant="accent"
               size="lg"
               icon={ArrowRight}
               onClick={() =>
@@ -34,22 +130,9 @@ export default function HomeHero() {
               Tìm sản phẩm phù hợp
             </CustomerButton>
 
-            <CustomerButton variant="outline" size="lg" to="/products">
-              Xem sản phẩm
+            <CustomerButton variant="outline-white" size="lg" to="/products">
+              Khám phá sản phẩm
             </CustomerButton>
-          </div>
-        </Reveal>
-
-        <Reveal as="div" delay={120} className="order-1 lg:order-2">
-          <div className="relative rounded-3xl overflow-hidden aspect-[4/3] shadow-sm">
-            <img
-              src="/assets/customer/hero/hero-farm-field.jpg"
-              alt="Cánh đồng xanh vào buổi sáng sớm"
-              className="h-full w-full object-cover"
-              fetchPriority="high"
-              width={1600}
-              height={1200}
-            />
           </div>
         </Reveal>
       </div>

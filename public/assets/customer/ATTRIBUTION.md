@@ -1,24 +1,72 @@
-# Image attribution — customer storefront assets
+# Asset attribution — customer storefront
 
 All photos below are downloaded locally (no hotlinking) under the free
 [Unsplash License](https://unsplash.com/license) (free for commercial and
 non-commercial use). None require attribution by license terms, but it is
 credited here for transparency and to make future replacement easier.
 
+Every asset referenced from `src/data/customer/*.js` or component props
+carries this metadata (not rendered on the customer-facing UI, used
+internally so the dev team knows what's stock vs. brand-verified):
+
+```js
+{
+  assetType: "illustration", // "illustration" | "photo" | "video"
+  dataStatus: "stock",       // "stock" | "brand-verified"
+  isBrandVerified: false,
+}
+```
+
+**None of the imagery below depicts real AgriFert fields, customers,
+dealers, factories, or product-in-use results.** It is stock content
+illustrating the fertilizer/agriculture domain in general. Captions in the
+UI use "Hình ảnh minh họa" rather than implying it's AgriFert's own.
+
+## Hero slideshow (`hero/`)
+
+| Local file | Source | Photographer | Role |
+|---|---|---|---|
+| `hero-farm-field.jpg` (+ `-mobile.jpg` crop) | https://unsplash.com/photos/photo-of-green-grass-field-at-sunrise-4miBe6zg5r0 | Ales Krivec | Slide 1 — LCP, sunrise field |
+| `hero-hands-seedling.jpg` | https://unsplash.com/photos/x8ZStukS2PM | Noah Buscher | Slide 2 — hands/seedling close-up |
+| `hero-golden-field.jpg` | https://unsplash.com/photos/golden-wheat-field-ready-for-harvest-_rXmtIMnOT8 | Nikolett Emmert | Slide 3 — harvest-season field |
+
+## Crop explorer (`crops/`)
+
 | Local file | Source | Photographer |
 |---|---|---|
-| `hero/hero-farm-field.jpg` | https://unsplash.com/photos/photo-of-green-grass-field-at-sunrise-4miBe6zg5r0 | Ales Krivec |
-| `crops/lua.jpg` | https://unsplash.com/photos/a-farmer-plants-rice-in-a-muddy-paddy-field-fj3ihxjJutU | Danielle Suijkerbuijk |
-| `crops/ca-phe.jpg` | https://unsplash.com/photos/vJ3KldG86Eo | Eduardo Gorghetto |
-| `crops/ho-tieu.jpg` | https://unsplash.com/photos/a-bunch-of-green-fruit-hanging-from-a-tree-NfxR-HFRQb4 | Siborey Sean |
-| `crops/sau-rieng.jpg` | https://unsplash.com/photos/TxOzkgw1oJg | The Manh |
-| `crops/cay-an-trai.jpg` | https://unsplash.com/photos/an-apple-orchard-with-lots-of-trees-in-the-background-grohryGg_kQ | Karin Kim |
-| `crops/rau-mau.jpg` | https://unsplash.com/photos/pXJr0AVxO8I | Egor Myznik |
-| `crops/cay-cong-nghiep.jpg` | https://unsplash.com/photos/sugar-cane-field-with-a-blue-sky-9A28d24Pyd4 | Emmanuel Appiah |
-| `crops/hoa-canh.jpg` | https://unsplash.com/photos/a-person-walks-through-a-lush-green-plant-nursery-iZVU7yLwD8E | Odile |
+| `lua.jpg` | https://unsplash.com/photos/a-farmer-plants-rice-in-a-muddy-paddy-field-fj3ihxjJutU | Danielle Suijkerbuijk |
+| `ca-phe.jpg` | https://unsplash.com/photos/vJ3KldG86Eo | Eduardo Gorghetto |
+| `ho-tieu.jpg` | https://unsplash.com/photos/a-bunch-of-green-fruit-hanging-from-a-tree-NfxR-HFRQb4 | Siborey Sean |
+| `sau-rieng.jpg` | https://unsplash.com/photos/TxOzkgw1oJg | The Manh |
+| `cay-an-trai.jpg` | https://unsplash.com/photos/an-apple-orchard-with-lots-of-trees-in-the-background-grohryGg_kQ | Karin Kim |
+| `rau-mau.jpg` | https://unsplash.com/photos/pXJr0AVxO8I | Egor Myznik |
+| `cay-cong-nghiep.jpg` | https://unsplash.com/photos/sugar-cane-field-with-a-blue-sky-9A28d24Pyd4 | Emmanuel Appiah |
+| `hoa-canh.jpg` | https://unsplash.com/photos/a-person-walks-through-a-lush-green-plant-nursery-iZVU7yLwD8E | Odile |
 
-## Notes
+## "Vì sao lựa chọn AgriFert?" section
 
-- Ảnh chọn theo mô tả gần nhất với từng cây trồng (không phải ảnh chụp tại vườn AgriFert thật) — dùng cho mục đích minh hoạ chuyên mục, không phải bằng chứng thực địa.
-- Không dùng ảnh nào có watermark, logo hoặc bao bì thương hiệu khác.
-- Chưa có ảnh cho: hero variant thứ 2, ảnh minh hoạ "Câu chuyện chất lượng AgriFert" (section 8), ảnh cover cho 4 bài viết kiến thức nhà nông — các phần này đang dùng nền màu/icon placeholder, cần bổ sung ảnh thật hoặc ảnh Unsplash phù hợp khi có thời gian.
+| Local file | Source | Photographer |
+|---|---|---|
+| `why-agrifert.jpg` | https://unsplash.com/photos/l_5MJnbrmrs | no one cares (@no_one_cares) — aerial shot of farm vehicles during a maize harvest, Germany, no visible logos/branding |
+
+## Video sections (`video/`)
+
+**Video files themselves are NOT included in this PR.** Automated download
+of Pexels/Pixabay video files was attempted (see report) but blocked by
+their bot-protection/rate-limiting in this environment, and no `ffmpeg`
+is available here to compress a fetched file. Both `VideoSection`
+placements currently render **poster-image only** (no `<video>` element
+mounted) — visually distinct full-bleed image sections, not broken video
+players. Swapping in a real compressed `.mp4` later only requires setting
+the `videoSrc` prop; no component changes needed.
+
+| Local file | Source | Photographer | Used as poster for |
+|---|---|---|---|
+| `video/poster-brand-story.jpg` | https://unsplash.com/photos/golden-wheat-field-ready-for-harvest-_rXmtIMnOT8 | Nikolett Emmert | "Đồng hành cùng từng mùa vụ" |
+| `video/poster-store-locator.jpg` | https://unsplash.com/photos/IQVFVH0ajag | Dan Meyers | "Tìm sản phẩm phù hợp cho cây trồng của bạn" |
+
+## Notes / still missing
+
+- Ảnh chọn theo mô tả gần nhất với từng cây trồng/chủ đề — không phải ảnh chụp tại vườn, đại lý hay nhà máy AgriFert thật.
+- Không dùng ảnh nào có watermark, logo hoặc bao bì thương hiệu khác (đã kiểm tra thủ công từng ảnh qua mô tả nguồn).
+- **Chưa có**: 2 video nền thật (chỉ có poster), ảnh cover cho 4 bài viết kiến thức nhà nông — các phần này cần bổ sung khi có công cụ trình duyệt thật hoặc tài khoản Pexels/Pixabay hợp lệ để tải, và cần `ffmpeg` (hoặc công cụ tương đương) để nén video trước khi đưa vào production.

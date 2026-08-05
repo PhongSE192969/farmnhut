@@ -68,20 +68,21 @@ export default function ProductFinder() {
   };
 
   return (
-    <section id="product-finder" className="font-customer bg-white py-14 lg:py-20 scroll-mt-24">
-      <div className="max-w-4xl mx-auto px-4 lg:px-10">
-        <Reveal>
-          <SectionHeading
-            align="center"
-            eyebrow="Công cụ hỗ trợ lựa chọn"
-            title="Tìm sản phẩm phù hợp với vườn của bạn"
-            description="Chọn cây trồng, giai đoạn sinh trưởng và vấn đề đang gặp (nếu có) để xem gợi ý sản phẩm phù hợp."
-            className="mx-auto mb-8"
-          />
-        </Reveal>
-
+    <section
+      id="product-finder"
+      className="font-customer relative z-20 -mt-14 sm:-mt-20 lg:-mt-24 px-4 lg:px-10 pb-14 lg:pb-20 scroll-mt-24"
+    >
+      <div className="max-w-4xl mx-auto">
         <Reveal delay={80}>
-          <div className="rounded-3xl border border-customer-primary/10 bg-customer-cream p-6 md:p-8 space-y-6">
+          <div className="rounded-3xl border border-customer-primary/10 bg-white shadow-xl shadow-black/10 p-6 md:p-8 space-y-6">
+            <SectionHeading
+              align="center"
+              eyebrow="Công cụ hỗ trợ lựa chọn"
+              title="Tìm sản phẩm phù hợp với vườn của bạn"
+              description="Chọn cây trồng, giai đoạn sinh trưởng và vấn đề đang gặp (nếu có) để xem gợi ý sản phẩm phù hợp."
+              className="mx-auto"
+            />
+
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-customer-secondary mb-3">
                 1. Cây đang trồng <span className="text-customer-primary">*</span>
