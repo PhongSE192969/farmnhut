@@ -17,22 +17,6 @@ body {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Hero slideshow — very subtle Ken Burns, scoped to the customer storefront hero only. */
-@keyframes hero-kenburns {
-  from { transform: scale(1); }
-  to { transform: scale(1.04); }
-}
-
-.animate-hero-kenburns {
-  animation: hero-kenburns 7000ms ease-out forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-hero-kenburns {
-    animation: none;
-  }
-}
-
 @layer components {
   .btn-primary {
     @apply px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all duration-200 flex items-center gap-2;
