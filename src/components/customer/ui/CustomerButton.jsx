@@ -9,6 +9,7 @@ const VARIANTS = {
     "border border-customer-primary text-customer-primary hover:bg-customer-light",
   "outline-white":
     "border border-white/70 text-white hover:bg-white hover:text-customer-primaryDark",
+  white: "bg-white text-customer-primaryDark hover:bg-customer-light shadow-sm",
   ghost: "text-customer-primary hover:bg-customer-light",
 };
 
@@ -30,12 +31,14 @@ export default function CustomerButton({
   icon: Icon,
   ...props
 }) {
-  const classes = `font-customer inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`;
+  const shine = variant === "primary" || variant === "accent" ? "btn-shine" : "";
+  const classes = `group font-customer inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed ${shine} ${VARIANTS[variant]} ${SIZES[size]} ${className}`;
+  const iconClasses = "transition-transform duration-300 group-hover:scale-110 group-hover:translate-x-0.5";
 
   if (to) {
     return (
       <Link to={to} className={classes} {...props}>
-        {Icon && <Icon size={18} />}
+        {Icon && <Icon size={18} className={iconClasses} />}
         {children}
       </Link>
     );
@@ -43,7 +46,7 @@ export default function CustomerButton({
 
   return (
     <button type="button" className={classes} {...props}>
-      {Icon && <Icon size={18} />}
+      {Icon && <Icon size={18} className={iconClasses} />}
       {children}
     </button>
   );

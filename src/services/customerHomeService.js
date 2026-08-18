@@ -8,6 +8,7 @@ import crops from "@/data/customer/crops";
 import cropProblems from "@/data/customer/cropProblems";
 import growthStages from "@/data/customer/growthStages";
 import articles from "@/data/customer/articles";
+import reviews from "@/data/customer/reviews";
 import { getFranchises } from "@/services/franchiseService";
 import { getProvinces } from "@/utils/mockData";
 
@@ -17,6 +18,10 @@ export const getCrops = async () => {
 
 export const getCropProblems = async () => {
   return cropProblems;
+};
+
+export const getReviews = async () => {
+  return reviews;
 };
 
 export const getGrowthStages = async () => {

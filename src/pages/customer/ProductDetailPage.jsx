@@ -1,324 +1,135 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  Star,
-  Plus,
   Minus,
-  ShoppingBag,
-  Heart,
-  ChevronLeft,
-  ChevronRight,
+  Plus,
+  ShoppingCart,
+  MessageCircleQuestion,
+  FlaskConical,
+  MapPin,
   Package,
+  Boxes,
+  Sparkles,
+  Archive,
 } from "lucide-react";
-import { useCartStore } from "../../stores/cartStore";
-import { formatCurrency } from "../../utils/helpers";
 import toast from "react-hot-toast";
-import { useLanguageStore } from "@/stores";
-import { translations } from "@/locales";
-import { getProductDetail } from "@/services/productService";
-import { getStocks } from "@/services/inventoryService";
+import { useCartStore } from "@/stores/cartStore";
+import { formatCurrency } from "@/utils/helpers";
+import { getCustomerProductById, getRelatedCustomerProducts } from "@/services/customerProductService";
+import { getCustomerProductIcon } from "@/utils/customerProductIcons";
+import CustomerButton from "@/components/customer/ui/CustomerButton";
+import Reveal from "@/components/customer/ui/Reveal";
 
-const MAIN_WAREHOUSE_ID = "00000000-0000-0000-0000-000000000000";
+const BADGE_STYLES = {
+  "Bán chạy": "bg-customer-earth text-white",
+  Mới: "bg-customer-primary text-white",
+};
 
-const getVariantImage = (variant, product) => {
-  if (variant?.images && typeof variant.images === "object") {
-    const keys = Object.keys(variant.images).sort();
-    const firstKey = keys[0];
+const TABS = [
+  { key: "overview", label: "Tổng quan" },
+  { key: "ingredients", label: "Thành phần" },
+  { key: "usage", label: "Công dụng" },
+  { key: "crops", label: "Cây phù hợp" },
+  { key: "howToUse", label: "Cách sử dụng" },
+  { key: "storage", label: "Bảo quản" },
+];
 
-    if (firstKey && variant.images[firstKey]) {
-      return variant.images[firstKey];
-    }
-  }
-
+function SpecItem({ icon, label, value }) {
   return (
-    variant?.imageUrl ||
-    product?.imageUrl ||
-    product?.thumbnailUrl ||
-    product?.image ||
-    "/agri-logo.svg"
+    <div className="rounded-xl bg-customer-cream/60 border border-customer-primary/10 p-4">
+      <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-customer-secondary mb-1.5">
+        {createElement(icon, { size: 13, className: "text-customer-primary" })}
+        {label}
+      </span>
+      <p className="text-sm font-semibold text-customer-ink">{value}</p>
+    </div>
   );
-};
+}
 
-const getVariantPrice = (variant, product) => {
-  return Number(
-    variant?.salePrice ??
-      variant?.sellingPrice ??
-      variant?.price ??
-      product?.price ??
-      0
+function InfoCard({ item }) {
+  return (
+    <div className="h-full rounded-2xl bg-white border border-customer-primary/10 p-5">
+      <span className="flex size-10 items-center justify-center rounded-xl bg-customer-light text-customer-primary mb-3">
+        {createElement(getCustomerProductIcon(item.icon), { size: 19 })}
+      </span>
+      <h3 className="font-bold text-sm text-customer-ink mb-1">{item.title}</h3>
+      <p className="text-xs text-customer-secondary leading-relaxed">{item.description}</p>
+    </div>
   );
-};
+}
 
-const getVariantLabel = (variant) => {
-  const variantName = variant?.variantName || "";
-
-  const packageText =
-    variant?.packageSize && variant?.packageUnit
-      ? `${variant.packageSize} ${variant.packageUnit}`
-      : variant?.packageUnit || "";
-
-  return variantName || packageText || variant?.sku || "Quy cách mặc định";
-};
-
-const extractData = (res) => {
-  return res?.data?.data || res?.data || res;
-};
-
-const extractStockContent = (res) => {
-  const data = extractData(res);
-
-  return Array.isArray(data?.content)
-    ? data.content
-    : Array.isArray(res?.data?.data?.content)
-      ? res.data.data.content
-      : Array.isArray(res?.data?.content)
-        ? res.data.content
-        : Array.isArray(res?.content)
-          ? res.content
-          : Array.isArray(data)
-            ? data
-            : [];
-};
-
-const calculateAvailableStock = (stocks) => {
-  return stocks.reduce((sum, stock) => {
-    return (
-      sum +
-      Number(stock.quantity || 0) -
-      Number(stock.reservedQuantity || 0)
-    );
-  }, 0);
-};
-
-export default function ProductDetailPage() {
-  const { id } = useParams();
+// Keyed by `id` from the default export below — a route param change fully
+// remounts this component instead of resetting loading/activeTab/qty by hand,
+// so there's no setState-in-effect cascade to reason about.
+function ProductDetailPageContent({ id }) {
   const navigate = useNavigate();
   const { addItem } = useCartStore();
 
-  const { language } = useLanguageStore();
-  const t =
-    (translations[language] || translations.vi).customer?.productDetail || {};
-
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState([]);
-  const [variantStocks, setVariantStocks] = useState({});
-
+  const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
-  const [selectedVariantId, setSelectedVariantId] = useState("");
-  const [liked, setLiked] = useState(false);
-
-  const similarScrollRef = useRef(null);
-
-  const scrollSimilarProducts = (direction) => {
-    if (!similarScrollRef.current) return;
-
-    similarScrollRef.current.scrollBy({
-      left: direction === "left" ? -300 : 300,
-      behavior: "smooth",
-    });
-  };
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    const fetchDetail = async () => {
-      setLoading(true);
-
-      try {
-        const res = await getProductDetail(id);
-        const data = res?.data?.data || res?.data || res;
-
-        if (!data) {
-          setProduct(null);
-          return;
-        }
-
-        const variantsList = Array.isArray(data.variants) ? data.variants : [];
-
-        const activeVariants = variantsList.filter(
-          (variant) => !variant.status || variant.status === "ACTIVE"
-        );
-
-        const firstActiveVariant = activeVariants[0] || variantsList[0] || null;
-
-        setProduct({
-          ...data,
-          categoryName:
-            data.category?.name || data.categoryName || "Chưa phân loại",
-          details: data.description || "Không có mô tả cho phân bón này.",
-          rating: 5.0,
-          reviews: 128,
-          badge: data.productType === "Combo" ? "Combo" : null,
-        });
-
-        setSelectedVariantId(firstActiveVariant?.id || "");
-        setQty(1);
-
-        try {
-          const stockRes = await getStocks(null, false, 0, 500);
-          const allStocks = extractStockContent(stockRes);
-
-          const stockMap = {};
-
-          variantsList.forEach((variant) => {
-            const stocksByVariant = allStocks.filter(
-              (stock) => stock.productVariantId === variant.id
-            );
-
-            const franchiseStocks = stocksByVariant.filter(
-              (stock) =>
-                stock.locationId !== MAIN_WAREHOUSE_ID &&
-                stock.locationType !== "WAREHOUSE"
-            );
-
-            const warehouseStocks = stocksByVariant.filter(
-              (stock) =>
-                stock.locationId === MAIN_WAREHOUSE_ID ||
-                stock.locationType === "WAREHOUSE"
-            );
-
-            const totalFranchiseStock = calculateAvailableStock(franchiseStocks);
-            const totalWarehouseStock = calculateAvailableStock(warehouseStocks);
-
-            stockMap[variant.id] = Math.max(
-              0,
-              totalFranchiseStock > 0 ? totalFranchiseStock : totalWarehouseStock
-            );
-          });
-
-          setVariantStocks(stockMap);
-        } catch (stockErr) {
-          console.error("Failed to fetch detailed stocks:", stockErr);
-
-          const fallbackStockMap = {};
-
-          variantsList.forEach((variant) => {
-            fallbackStockMap[variant.id] = variant.quantity ?? 999;
-          });
-
-          setVariantStocks(fallbackStockMap);
-        }
-
-        // Tạm tắt AI similar vì /api/ai/recommend/similar đang trả 500.
-        // Không ảnh hưởng tới xem chi tiết, chọn quy cách, tồn kho, add cart.
-        setRelated([]);
-      } catch (err) {
-        console.error("Failed to fetch product:", err);
-        setProduct(null);
-      } finally {
+    Promise.all([getCustomerProductById(id), getRelatedCustomerProducts(id)]).then(
+      ([productData, relatedList]) => {
+        setProduct(productData);
+        setRelated(relatedList);
         setLoading(false);
       }
-    };
-
-    if (id) {
-      fetchDetail();
-    }
+    );
   }, [id]);
 
-  const variants = useMemo(() => {
-    return Array.isArray(product?.variants) ? product.variants : [];
-  }, [product]);
+  const totalPrice = useMemo(() => (product ? product.price * qty : 0), [product, qty]);
 
-  const activeVariants = useMemo(() => {
-    return variants.filter((variant) => !variant.status || variant.status === "ACTIVE");
-  }, [variants]);
-
-  const currentVariant = useMemo(() => {
-    if (activeVariants.length === 0) return null;
-
-    return (
-      activeVariants.find((variant) => variant.id === selectedVariantId) ||
-      activeVariants[0]
-    );
-  }, [activeVariants, selectedVariantId]);
-
-  const maxAvailable = useMemo(() => {
-    if (!currentVariant?.id) return 0;
-
-    return variantStocks[currentVariant.id] ?? currentVariant.quantity ?? 999;
-  }, [currentVariant, variantStocks]);
-
-  const unitPrice = useMemo(() => {
-    return getVariantPrice(currentVariant, product);
-  }, [currentVariant, product]);
-
-  const totalPrice = unitPrice * qty;
-
-  const displayImage = useMemo(() => {
-    return getVariantImage(currentVariant, product);
-  }, [currentVariant, product]);
-
-  const isOutOfStock =
-    !currentVariant ||
-    product?.status !== "ACTIVE" ||
-    currentVariant?.status !== "ACTIVE" ||
-    maxAvailable <= 0;
-
-  useEffect(() => {
-    if (maxAvailable > 0 && qty > maxAvailable) {
-      setQty(maxAvailable);
-    }
-  }, [maxAvailable, qty]);
-
-  const handleAddToCart = async () => {
-    if (isOutOfStock || !currentVariant) return;
-
-    const variantLabel = getVariantLabel(currentVariant);
+  const addToCart = async (quantity) => {
+    if (!product) return false;
 
     let success = true;
-
-    for (let i = 0; i < qty; i++) {
+    for (let i = 0; i < quantity; i++) {
       const added = await addItem(
         {
-          ...product,
-          price: unitPrice,
-          imageUrl: displayImage,
-          image: displayImage,
-          selectedVariantName: variantLabel,
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.image,
+          selectedVariantName: product.unit,
         },
         {
-          variantId: currentVariant.id,
-          productVariantId: currentVariant.id,
-          variantName: currentVariant.variantName,
-          packageSize: currentVariant.packageSize,
-          packageUnit: currentVariant.packageUnit,
-          sku: currentVariant.sku,
+          variantId: `${product.id}-default`,
+          productVariantId: `${product.id}-default`,
+          variantName: product.unit,
+          sku: product.id,
         },
-        maxAvailable
+        999
       );
-
       if (!added) {
         success = false;
         break;
       }
     }
+    return success;
+  };
 
+  const handleAddToCart = async () => {
+    const success = await addToCart(qty);
     if (success) {
-      toast.success(
-        t.addedToCart
-          ? t.addedToCart
-              .replace("{qty}", qty)
-              .replace("{name}", `${product.name} (${variantLabel})`)
-          : `Đã thêm ${qty}x ${product.name} (${variantLabel}) vào giỏ vật tư!`
-      );
+      toast.success(`Đã thêm ${qty}x ${product.name} vào giỏ vật tư!`);
     }
   };
 
-  const handleIncrease = () => {
-    if (qty < maxAvailable) {
-      setQty((prev) => prev + 1);
-    } else {
-      toast.error(`Phân bón này chỉ còn ${maxAvailable} đơn vị.`);
+  const handleBuyNow = async () => {
+    const success = await addToCart(qty);
+    if (success) {
+      navigate("/checkout");
     }
-  };
-
-  const handleDecrease = () => {
-    setQty((prev) => Math.max(1, prev - 1));
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-primary font-bold">
+      <div className="font-customer min-h-screen flex items-center justify-center text-customer-primary font-bold">
         Đang tải...
       </div>
     );
@@ -326,264 +137,276 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="font-customer min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-black text-primary">
-            {t.notFound || "Không tìm thấy phân bón"}
-          </h2>
-
-          <Link
-            to="/products"
-            className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-xl"
-          >
-            <ArrowLeft size={16} /> {t.backToMenu || "Quay lại danh mục"}
-          </Link>
+          <h2 className="text-2xl font-extrabold text-customer-ink">Không tìm thấy sản phẩm</h2>
+          <div className="mt-4">
+            <CustomerButton variant="primary" to="/products" icon={ArrowLeft}>
+              Quay lại danh mục
+            </CustomerButton>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-light">
-      <div className="bg-white border-b border-gray-100 px-4 lg:px-20 py-4">
-        <div className="max-w-7xl mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-primary transition-colors"
-          >
-            <ArrowLeft size={16} /> {t.backToMenu || "Quay lại danh mục"}
-          </button>
+    <div className="font-customer min-h-screen bg-customer-cream">
+      <div className="bg-white border-b border-customer-primary/10 px-4 lg:px-10 py-4">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-customer-secondary">
+          <Link to="/" className="hover:text-customer-primary transition-colors">
+            Trang chủ
+          </Link>
+          <span>/</span>
+          <Link to="/products" className="hover:text-customer-primary transition-colors">
+            Sản phẩm
+          </Link>
+          <span>/</span>
+          <span className="text-customer-ink font-semibold">{product.name}</span>
         </div>
       </div>
 
-      <div className="px-4 lg:px-20 py-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="relative">
-              <div className="aspect-square rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-lg">
-                <img
-                  src={displayImage}
-                  alt={product.name}
-                  onError={(event) => {
-                    event.target.onerror = null;
-                    event.target.src = "/agri-logo.svg";
-                  }}
-                  className="w-full h-full object-cover transition-all duration-500"
-                />
-              </div>
-
-              {product.badge && (
-                <span className="absolute top-4 left-4 bg-gold text-primary font-bold text-sm px-3 py-1.5 rounded-xl shadow">
-                  {product.badge}
-                </span>
+      <div className="max-w-7xl mx-auto px-4 lg:px-10 py-8 lg:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          <Reveal>
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-customer-primary/10 shadow-lg">
+              <img
+                src={product.image}
+                alt={product.imageAlt}
+                className="w-full h-full object-contain p-8"
+              />
+              {product.badges.length > 0 && (
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                  {product.badges.map((badge) => (
+                    <span
+                      key={badge}
+                      className={`text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-lg shadow ${BADGE_STYLES[badge] || "bg-customer-primary text-white"}`}
+                    >
+                      {badge}
+                    </span>
+                  ))}
+                </div>
               )}
+            </div>
+          </Reveal>
 
-              <button
-                onClick={() => setLiked(!liked)}
-                className={`absolute top-4 right-4 size-10 rounded-full bg-white shadow-md flex items-center justify-center transition-all ${
-                  liked ? "text-red-500" : "text-gray-300"
-                }`}
-              >
-                <Heart size={18} className={liked ? "fill-red-500" : ""} />
-              </button>
+          <Reveal delay={80} className="flex flex-col gap-6">
+            <div>
+              <span className="text-customer-primary font-bold text-xs uppercase tracking-widest">
+                {product.category}
+              </span>
+              <h1 className="text-3xl md:text-4xl font-extrabold text-customer-ink mt-2 leading-tight">
+                {product.name}
+              </h1>
+              <p className="text-customer-secondary mt-3 leading-relaxed text-sm">{product.tagline}</p>
             </div>
 
-            <div className="flex flex-col gap-6">
-              <div>
-                <span className="text-gold font-bold text-xs uppercase tracking-widest">
-                  {product.categoryName}
-                </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <SpecItem icon={FlaskConical} label="Thành phần chính" value={product.mainIngredients} />
+              <SpecItem icon={MapPin} label="Xuất xứ" value={product.origin} />
+              <SpecItem icon={Boxes} label="Quy cách" value={product.unit} />
+              <SpecItem icon={Package} label="Dạng sản phẩm" value={product.form} />
+              <SpecItem icon={Sparkles} label="Công dụng chính" value={product.mainUse} />
+              <SpecItem icon={Archive} label="Bảo quản" value="Nơi khô ráo, thoáng mát" />
+            </div>
 
-                <h1 className="text-4xl font-black text-primary mt-2 leading-tight">
-                  {product.name}
-                </h1>
-
-                <div className="flex items-center gap-3 mt-3">
-                  <div className="flex items-center gap-1 text-gold">
-                    <Star size={14} className="fill-gold" />
-                    <span className="font-bold text-sm text-primary">
-                      {product.rating}
-                    </span>
-                  </div>
-
-                  <span className="text-gray-400 text-sm">
-                    ({product.reviews} lượt đánh giá)
-                  </span>
-                </div>
-
-                <p className="text-gray-500 mt-4 leading-relaxed">
-                  {product.details}
-                </p>
+            <div className="flex flex-col gap-4 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-3xl font-extrabold text-customer-accent">{formatCurrency(totalPrice)}</span>
+                <span className="text-sm text-customer-secondary">/ {product.unit}</span>
               </div>
 
-              <div className="space-y-5">
-                {activeVariants.length > 0 && (
-                  <div>
-                    <h3 className="font-black text-xs uppercase tracking-wider text-gray-400 mb-3">
-                      Quy cách
-                    </h3>
-
-                    <div className="flex gap-2 flex-wrap">
-                      {activeVariants.map((variant) => {
-                        const isSelected = currentVariant?.id === variant.id;
-                        const label = getVariantLabel(variant);
-
-                        return (
-                          <button
-                            key={variant.id}
-                            onClick={() => {
-                              setSelectedVariantId(variant.id);
-                              setQty(1);
-                            }}
-                            className={`px-4 py-2 rounded-xl border-2 font-bold transition-all ${
-                              isSelected
-                                ? "border-primary bg-primary text-white"
-                                : "border-gray-100 hover:border-primary"
-                            }`}
-                            title={label}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="text-3xl font-black text-primary">
-                    {formatCurrency(totalPrice)}
-                  </div>
-
-                  {maxAvailable > 0 && (
-                    <div className="text-sm font-bold text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                      Còn {maxAvailable} đơn vị
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3 bg-gray-100 rounded-xl p-1">
-                    <button
-                      onClick={handleDecrease}
-                      className="size-10 rounded-lg bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    >
-                      <Minus size={16} />
-                    </button>
-
-                    <span className="font-black text-lg w-6 text-center">
-                      {qty}
-                    </span>
-
-                    <button
-                      onClick={handleIncrease}
-                      disabled={qty >= maxAvailable}
-                      className={`size-10 rounded-lg bg-white shadow-sm flex items-center justify-center transition-colors ${
-                        qty >= maxAvailable
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-gray-50"
-                      }`}
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 bg-white border border-customer-primary/15 rounded-xl p-1">
                   <button
-                    onClick={handleAddToCart}
-                    disabled={isOutOfStock}
-                    className={`flex-1 h-12 font-black rounded-xl transition-all flex items-center justify-center gap-2 ${
-                      isOutOfStock
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-gold text-primary hover:bg-yellow-400 shadow-lg shadow-gold/20"
-                    }`}
+                    onClick={() => setQty((prev) => Math.max(1, prev - 1))}
+                    className="size-10 rounded-lg flex items-center justify-center hover:bg-customer-light transition-colors"
                   >
-                    <ShoppingBag size={18} />
-                    {isOutOfStock ? "Hết hàng" : t.addToCart || "Thêm vào giỏ vật tư"}
+                    <Minus size={16} />
+                  </button>
+                  <span className="font-bold text-lg w-6 text-center">{qty}</span>
+                  <button
+                    onClick={() => setQty((prev) => prev + 1)}
+                    className="size-10 rounded-lg flex items-center justify-center hover:bg-customer-light transition-colors"
+                  >
+                    <Plus size={16} />
                   </button>
                 </div>
+
+                <CustomerButton variant="accent" size="lg" onClick={handleBuyNow} className="flex-1">
+                  Mua ngay
+                </CustomerButton>
+                <CustomerButton variant="primary" size="lg" icon={ShoppingCart} onClick={handleAddToCart} className="flex-1">
+                  Thêm vào giỏ
+                </CustomerButton>
               </div>
+
+              <CustomerButton
+                variant="outline"
+                size="lg"
+                icon={MessageCircleQuestion}
+                to="/gioi-thieu"
+                className="w-full"
+              >
+                Tư vấn sản phẩm này
+              </CustomerButton>
             </div>
+          </Reveal>
+        </div>
+
+        {/* Tabs */}
+        <Reveal className="mt-14">
+          <div className="flex flex-wrap gap-2 border-b border-customer-primary/10 mb-6">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2.5 text-sm font-bold rounded-t-lg transition-colors border-b-2 -mb-px ${
+                  activeTab === tab.key
+                    ? "border-customer-primary text-customer-primary"
+                    : "border-transparent text-customer-secondary hover:text-customer-ink"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {related.length > 0 && (
-            <div className="mt-16">
-              <h2 className="text-2xl font-black text-primary mb-6">
-                Phân bón tương tự
-              </h2>
-
-              <div className="relative group">
-                <button
-                  onClick={() => scrollSimilarProducts("left")}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white shadow-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all -left-5 opacity-0 group-hover:opacity-100"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-
-                <button
-                  onClick={() => scrollSimilarProducts("right")}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white shadow-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all -right-5 opacity-0 group-hover:opacity-100"
-                >
-                  <ChevronRight size={20} />
-                </button>
-
-                <div
-                  ref={similarScrollRef}
-                  className="flex gap-6 overflow-x-auto scroll-smooth snap-x pb-6 no-scrollbar"
-                >
-                  {related.map((relatedProduct) => {
-                    const firstVariant = Array.isArray(relatedProduct.variants)
-                      ? relatedProduct.variants[0]
-                      : null;
-
-                    const rPrice = getVariantPrice(firstVariant, relatedProduct);
-                    const rImg = getVariantImage(firstVariant, relatedProduct);
-
-                    return (
-                      <Link
-                        key={relatedProduct.id}
-                        to={`/products/${relatedProduct.id}`}
-                        className="min-w-[250px] snap-start bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all"
-                      >
-                        <div className="aspect-[4/5] bg-gray-50">
-                          <img
-                            src={rImg}
-                            className="w-full h-full object-cover"
-                            alt={relatedProduct.name}
-                            onError={(event) => {
-                              event.target.onerror = null;
-                              event.target.src = "/agri-logo.svg";
-                            }}
-                          />
-                        </div>
-
-                        <div className="p-4">
-                          <h3 className="font-bold text-primary line-clamp-1">
-                            {relatedProduct.name}
-                          </h3>
-                          <div className="text-gold font-black mt-1">
-                            {formatCurrency(rPrice)}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
+          <div className="bg-white rounded-2xl border border-customer-primary/10 p-6 lg:p-8 text-sm leading-relaxed text-customer-secondary">
+            {activeTab === "overview" && (
+              <div className="space-y-3">
+                <p>{product.overview}</p>
+                <p>{product.overviewExtra}</p>
               </div>
-            </div>
-          )}
+            )}
+            {activeTab === "ingredients" && (
+              <p>
+                <span className="font-bold text-customer-ink">Thành phần chính: </span>
+                {product.mainIngredients}
+              </p>
+            )}
+            {activeTab === "usage" && (
+              <ul className="space-y-2 list-disc pl-5">
+                {product.benefits.map((benefit) => (
+                  <li key={benefit.title}>
+                    <span className="font-bold text-customer-ink">{benefit.title}: </span>
+                    {benefit.description}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {activeTab === "crops" && (
+              <div className="flex flex-wrap gap-2">
+                {product.cropTypes.map((crop) => (
+                  <span
+                    key={crop}
+                    className="px-3 py-1.5 rounded-lg bg-customer-light text-customer-primaryDark text-xs font-bold"
+                  >
+                    {crop}
+                  </span>
+                ))}
+              </div>
+            )}
+            {activeTab === "howToUse" && <p>{product.howToUse}</p>}
+            {activeTab === "storage" && <p>{product.storage}</p>}
+          </div>
+        </Reveal>
 
-          {activeVariants.length === 0 && (
-            <div className="mt-10 flex items-center gap-3 text-gray-400 bg-white border border-dashed border-gray-200 rounded-2xl p-6">
-              <Package size={20} />
-              <span className="font-semibold">
-                Phân bón này chưa có quy cách đang hoạt động.
-              </span>
+        {/* Lợi ích của sản phẩm */}
+        <section className="mt-14 -mx-4 lg:-mx-10 px-4 lg:px-10 py-12 bg-customer-light">
+          <Reveal>
+            <span className="block text-xs font-bold uppercase tracking-widest text-customer-earth">Nổi bật</span>
+            <h2 className="mt-2 text-2xl font-extrabold text-customer-ink">Lợi ích của sản phẩm</h2>
+          </Reveal>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {product.benefits.map((item, index) => (
+              <Reveal key={item.title} delay={index * 70}>
+                <InfoCard item={item} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* Gợi ý theo dấu hiệu */}
+        <section className="-mx-4 lg:-mx-10 px-4 lg:px-10 py-12 bg-customer-cream">
+          <Reveal>
+            <span className="block text-xs font-bold uppercase tracking-widest text-customer-earth">Gợi ý</span>
+            <h2 className="mt-2 text-2xl font-extrabold text-customer-ink">
+              Sản phẩm phù hợp khi cây có dấu hiệu
+            </h2>
+          </Reveal>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {product.symptoms.map((item, index) => (
+              <Reveal key={item.title} delay={index * 60}>
+                <InfoCard item={item} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* Thông tin sản phẩm */}
+        <Reveal className="mt-14">
+          <span className="block text-xs font-bold uppercase tracking-widest text-customer-earth">Chi tiết</span>
+          <h2 className="mt-2 text-2xl font-extrabold text-customer-ink mb-6">Thông tin sản phẩm</h2>
+
+          <div className="rounded-2xl border border-customer-primary/10 overflow-hidden bg-white">
+            {[
+              ["Thương hiệu", product.brand],
+              ["Tên sản phẩm", product.name],
+              ["Nhóm sản phẩm", product.category],
+              ["Quy cách", product.unit],
+              ["Dạng sản phẩm", product.form],
+              ["Xuất xứ", product.origin],
+              ["Đơn vị phân phối", product.distributor],
+            ].map(([label, value], index) => (
+              <div
+                key={label}
+                className={`flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 px-5 py-3.5 text-sm ${
+                  index % 2 === 1 ? "bg-customer-cream/60" : ""
+                }`}
+              >
+                <span className="sm:w-48 shrink-0 font-bold text-customer-ink">{label}</span>
+                <span className="text-customer-secondary">{value}</span>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+
+        {/* Sản phẩm liên quan */}
+        {related.length > 0 && (
+          <Reveal className="mt-14">
+            <h2 className="text-2xl font-extrabold text-customer-ink mb-6">Sản phẩm cùng nhóm</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+              {related.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/products/${item.id}`}
+                  className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-customer-primary/10 shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
+                >
+                  <div className="aspect-square bg-customer-light">
+                    <img
+                      src={item.image}
+                      alt={item.imageAlt}
+                      className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-bold text-sm text-customer-ink line-clamp-1">{item.name}</h3>
+                    <span className="text-sm font-extrabold text-customer-accent mt-1 block">
+                      {formatCurrency(item.price)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
-          )}
-        </div>
+          </Reveal>
+        )}
       </div>
     </div>
   );
+}
+
+export default function ProductDetailPage() {
+  const { id } = useParams();
+  return <ProductDetailPageContent key={id} id={id} />;
 }

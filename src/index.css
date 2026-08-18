@@ -33,6 +33,123 @@ body {
   }
 }
 
+/* Shine sweep on hover — customer-facing primary/accent CTAs only
+   (CustomerButton). Needs a real ::after pseudo-element, so this can't be
+   expressed as plain Tailwind utilities. */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 700ms ease;
+  pointer-events: none;
+}
+
+.btn-shine:hover::after {
+  transform: translateX(120%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-shine::after {
+    display: none;
+  }
+}
+
+/* Slow ambient zoom for static illustrative photos (e.g. WhyAgriFert),
+   distinct from the hero Ken Burns — much subtler, loops indefinitely. */
+@keyframes slow-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+.animate-slow-zoom {
+  animation: slow-zoom 14s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slow-zoom {
+    animation: none;
+  }
+}
+
+/* "Gợi ý theo giai đoạn" timeline — flows the dashes along the curve
+   (classic "marching ants") so the connecting line reads as dinh dưỡng
+   actively moving from stage 1 toward stage 6, not just a static path.
+   -26 is exactly 2× the path's own dash+gap period (stroke-dasharray
+   "7 6" = 13), so the loop point is invisible. */
+@keyframes nutrition-line-flow {
+  to {
+    stroke-dashoffset: -26;
+  }
+}
+
+.animate-line-flow {
+  animation: nutrition-line-flow 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-line-flow {
+    animation: none;
+  }
+}
+
+/* "Khách hàng nói gì" review rows — each row's track renders its cards
+   twice back to back (see CustomerReviews.jsx) and slides exactly one copy
+   width (-50%), so the loop point is seamless: the moment the first copy
+   scrolls fully offscreen, the second copy is sitting exactly where the
+   first one started. Two directions so the two rows visibly counter-scroll. */
+@keyframes reviews-marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes reviews-marquee-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+.animate-marquee-left {
+  animation: reviews-marquee-left 45s linear infinite;
+}
+
+.animate-marquee-right {
+  animation: reviews-marquee-right 55s linear infinite;
+}
+
+.animate-marquee-left:hover,
+.animate-marquee-right:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-left,
+  .animate-marquee-right {
+    animation: none;
+  }
+}
+
+/* AboutPage hero — the repeating semicircle "scallop/cloud" edge where the
+   hero photo meets the white page background below it. A tiled
+   radial-gradient is far simpler and crisper at any width than hand-drawing
+   N arcs in an SVG path: each cell gets a transparent semicircle scooped
+   out of its top-center, so the photo peeks through the dips while the
+   solid color forms the bumps between them. */
+.hero-scallop {
+  background: radial-gradient(circle at 50% 0, transparent 19px, white 20px) 0 0 / 40px 40px repeat-x;
+}
+
+@media (min-width: 1024px) {
+  .hero-scallop {
+    background: radial-gradient(circle at 50% 0, transparent 31px, white 32px) 0 0 / 64px 64px repeat-x;
+  }
+}
+
 @layer components {
   .btn-primary {
     @apply px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all duration-200 flex items-center gap-2;

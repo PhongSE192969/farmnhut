@@ -15,11 +15,10 @@ export default function FarmerKnowledge() {
 
   if (articles.length === 0) return null;
 
-  const [featured, ...rest] = articles;
-  const smallArticles = rest.slice(0, 3);
+  const latestArticles = articles.slice(0, 3);
 
   return (
-    <section className="font-customer bg-customer-light/50 py-14 lg:py-20">
+    <section className="font-customer bg-white py-14 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
           <SectionHeading
@@ -32,18 +31,12 @@ export default function FarmerKnowledge() {
           </CustomerButton>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <Reveal>
-            <ArticleCard article={featured} featured />
-          </Reveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-5">
-            {smallArticles.map((article, index) => (
-              <Reveal key={article.slug} delay={(index + 1) * 80}>
-                <ArticleCard article={article} />
-              </Reveal>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {latestArticles.map((article, index) => (
+            <Reveal key={article.slug} delay={index * 80}>
+              <ArticleCard article={article} />
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

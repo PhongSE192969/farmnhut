@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Leaf } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import CustomerButton from "@/components/customer/ui/CustomerButton";
 import Reveal from "@/components/customer/ui/Reveal";
 
@@ -110,10 +110,6 @@ export default function HomeHero() {
 
       <div className="relative z-10 px-4 lg:px-10 pt-20 pb-24 lg:pb-32 max-w-7xl mx-auto w-full">
         <Reveal className="max-w-xl">
-          <span className="inline-flex items-center gap-2 bg-customer-primaryDark/80 text-customer-accent border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-5 backdrop-blur-sm">
-            <Leaf size={13} /> Giải pháp dinh dưỡng cây trồng
-          </span>
-
           <h1 className="text-white text-3xl md:text-5xl font-extrabold leading-tight tracking-tight mb-5 [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">
             Dinh dưỡng đúng lúc,
             <br />
@@ -145,6 +141,13 @@ export default function HomeHero() {
           </div>
         </Reveal>
       </div>
+
+      <span
+        aria-hidden="true"
+        className="hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-10 items-center justify-center size-9 rounded-full border border-white/30 text-white/80 animate-bounce motion-reduce:animate-none"
+      >
+        <ChevronDown size={18} />
+      </span>
     </section>
   );
 }

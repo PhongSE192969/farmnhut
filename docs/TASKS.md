@@ -1,6 +1,6 @@
 # TASKS — Quản lý công việc
 
-_Cập nhật: 2026-08-04_
+_Cập nhật: 2026-08-15_
 
 Quy tắc: mỗi thời điểm chỉ nên có **một** task chính ở trạng thái `In progress`, trừ khi giải thích rõ. ID tăng dần `TASK-0XX`.
 
@@ -10,7 +10,11 @@ _Không có._
 
 ## Ready
 
-_Không có — chờ người dùng xác nhận mục tiêu tối ưu frontend cụ thể (xem docs/REQUIREMENTS.md)._
+| ID | Mô tả | Mục tiêu | File/module liên quan | Dependency | Cập nhật |
+|---|---|---|---|---|---|
+| TASK-008 | Commit khối thay đổi redesign trang chủ hiện tại (đã lint/build sạch, chưa commit) sau khi người dùng xác nhận nội dung | Chốt tiến độ trên `feature/home-redesign`, tránh mất việc đã làm | `HomePage.jsx` + `src/components/customer/home/*` — danh sách đầy đủ ở CURRENT_STATE.md | Xác nhận người dùng | 2026-08-15 |
+| TASK-009 | Quyết định giữ/xoá 2 thư mục tiếng Việt chưa track ở root (`"ảnh web/"`, `"Hình ảnh sản phẩm/"`) | Dọn repo, tránh commit nhầm asset tham khảo không cần thiết | root | Xác nhận người dùng | 2026-08-15 |
+| TASK-010 | Sửa nested `<a>` trong `ProductCard.jsx` (dòng 251, lồng trong `<Link>` dòng 137–262) | HTML hợp lệ, hết warning React | `src/components/customer/ProductCard.jsx` | — | 2026-08-15 |
 
 ## Backlog
 

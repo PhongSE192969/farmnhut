@@ -37,7 +37,7 @@ export default function StoreLocator() {
 
         <Reveal delay={100}>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center max-w-lg mx-auto">
-            <div className="w-full sm:flex-1 flex items-center gap-2 h-12 px-4 rounded-xl border border-customer-primary/20 bg-customer-cream">
+            <div className="w-full sm:flex-1 flex items-center gap-2 h-12 px-4 rounded-xl border border-customer-primary/20 bg-customer-cream transition-shadow duration-300 focus-within:ring-2 focus-within:ring-customer-primary/30 focus-within:border-customer-primary/40">
               <MapPin size={16} className="text-customer-primary shrink-0" />
               <label htmlFor="store-locator-region" className="sr-only">
                 Chọn tỉnh/thành

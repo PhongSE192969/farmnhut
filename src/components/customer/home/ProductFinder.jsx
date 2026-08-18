@@ -70,7 +70,7 @@ export default function ProductFinder() {
   return (
     <section
       id="product-finder"
-      className="font-customer bg-customer-light/50 px-4 lg:px-10 py-14 lg:py-20 scroll-mt-24"
+      className="font-customer bg-white px-4 lg:px-10 py-14 lg:py-20 scroll-mt-24"
     >
       <div className="max-w-4xl mx-auto">
         <Reveal>
